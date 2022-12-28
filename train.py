@@ -9,26 +9,93 @@ from utils import get_logger, get_transforms, get_dataset, get_loaders, get_mode
 
 
 def train(args):
-    model = args.model
-    model.train()
+    args.model.train()
+    running_acc = 0.0
+    running_loss = 0.0
+    num_samples = 0
+    args.train_acc = 0.0
+    args.train_loss = 0.0
+    # choose longer loader to be main loader, to guarantee each data is seen at least once
+    if len(args.trainloader_u) >= len(args.trainloader):
+        unlabeled_main = True
+        loader_gen = iter(args.trainloader)
+    else:
+        unlabeled_main = False
+        loader_gen = iter(args.trainloader_u)
+    pbar = tqdm(args.trainloader_u if unlabeled_main else args.trainloader)
+    for i, (inputs, labels) in enumerate(pbar):
+        # get labeled & unlabeled batch
+        try:
+            inputs_gen, labels_gen = next(loader_gen)  # labled data if unlabled_main is True, else unlabeled data
+        except StopIteration:
+            loader_gen = iter(args.trainloader if unlabeled_main else args.trainloader_u)
+            inputs_gen, labels_gen = loader_gen.next()
+        if unlabeled_main:
+            images_u = inputs
+            inputs_l, labels_l = inputs_gen.to(args.device), labels_gen.to(args.device)
+        else:
+            images_u = inputs_gen
+            inputs_l, labels_l = inputs.to(args.device), labels.to(args.device)
+        num_samples += inputs_l.shape[0]
+        # forward labeled data
+        args.optimizer.zero_grad()
+        outputs = args.model(inputs_l).softmax(1)
+        # compute loss for labeled data
+        loss_l = args.criterion(outputs, torch.nn.functional.one_hot(labels_l, 10).float())
+        running_acc = (outputs.argmax(1) == labels_l).sum().item()
+        args.train_acc += running_acc
+        num_samples += inputs_l.shape[0]
+        # apply weak transform to unlabeled input data for acquiring pseudo label
+        with torch.no_grad():
+            tensors_u = []
+            for img in images_u:
+                tensors_u.append(args.weak_transforms(img))
+            tensors_u = torch.stack(tensors_u, dim=0).to(args.device)
+            outputs = args.model(tensors_u).softmax(1)
+            max_values, max_index = outputs.max(1)
+            pseudo_mask = max_values > args.cfg.train.tau
+            pseudo_labels = max_index[pseudo_mask]
+        # construct, forward, and compute loss for unlabled data if pseudo label exists
+        if pseudo_labels.shape[0] > 0:
+            inputs_u = []
+            valid_index = pseudo_mask.nonzero()[:, 0].tolist()
+            for vi in valid_index:
+                inputs_u.append(args.strong_transforms(images_u[vi]))
+            inputs_u = torch.stack(inputs_u, dim=0).to(args.device)
+            outputs = args.model(inputs_u).softmax(1)
+            loss_u = args.criterion(outputs, torch.nn.functional.one_hot(pseudo_labels, 10).float())
+            loss_total = loss_l + loss_u * args.cfg.train.unsup_weight
+        else:
+            loss_total = loss_l
+        # backward
+        running_loss = loss_total.item()
+        args.train_loss += running_loss
+        loss_total.backward()
+        args.optimizer.step()
+        # print
+        pbar.set_description("Running Acc:{:.4f}, Running Loss:{:.4f}, Avg Acc:{:.4f}, Avg Loss:{:.4f}".format(
+            running_acc / inputs_l.shape[0], running_loss, args.train_acc / num_samples, args.train_loss / (i + 1)))
+    # average train acc & loss
+    args.train_acc = args.train_acc / num_samples
+    args.train_loss = args.train_loss / (i + 1)  # computing accurate avg loss is difficult due to the varying batch size, use batch index i instead
     return args
 
 
 def eval(args):
-    model = args.model
-    model.eval()
+    args.model.eval()
     running_acc = 0.0
     running_loss = 0.0
     num_samples = 0
     args.val_acc = 0.0
     args.val_loss = 0.0
+    args.cfg.param.checkpoint_name = "model_last.pth"
 
     pbar = tqdm(args.testloader)
     for i, (inputs, labels) in enumerate(pbar):
         num_samples += inputs.shape[0]
         inputs, labels = inputs.to(args.device), labels.to(args.device)
         # forward
-        outputs = model(inputs).softmax(1)
+        outputs = args.model(inputs).softmax(1)
         # compute acc & loss
         running_acc = (outputs.argmax(1) == labels).sum().item()
         args.val_acc += running_acc
@@ -36,8 +103,8 @@ def eval(args):
         running_loss = loss.item()
         args.val_loss += running_loss * inputs.shape[0]
         # set tqdm description
-        pbar.set_description("Running Acc:{:.4f}, Running Loss:{:.4f}, Avg Acc:{:.4f}, Avf Loss:{:.4f}".format(
-            running_acc, running_loss, args.val_acc / num_samples, args.val_loss / num_samples))
+        pbar.set_description("Running Acc:{:.4f}, Running Loss:{:.4f}, Avg Acc:{:.4f}, Avg Loss:{:.4f}".format(
+            running_acc / inputs.shape[0], running_loss, args.val_acc / num_samples, args.val_loss / num_samples))
     # average val acc & loss
     args.val_acc = args.val_acc / num_samples
     args.val_loss = running_loss / num_samples
@@ -47,6 +114,7 @@ def eval(args):
     # update best val loss
     if args.val_loss < args.best_val_loss:
         args.best_val_loss = args.val_loss
+        args.cfg.param.checkpoint_name = "model_best.pth"
     return args
 
 
@@ -123,13 +191,16 @@ def main(args):
     # main training loop
     for ep in range(start_epoch, args.cfg.train.num_epochs):
         args.current_epoch = ep
+        args.logger.info("Epoch: {}\tLR: {}".format(ep, args.optimizer.state_dict()['param_groups'][0]['lr']))
         # train
         args = train(args)
         # eval
         args = eval(args)
+        # scheduler
+        args.scheduler.step()
         # print
-        args.logger.info("Epoch: {}\nTrain Acc: {:.4f}\tTrain Loss: {:.4f}\nVal Acc: {:.4f}\tVal Loss: {:.4f}".format(
-            args.current_epoch, args.train_acc, args.train_loss, args.val_acc, args.val_loss
+        args.logger.info("Train Acc: {:.4f}\tTrain Loss: {:.4f}\nVal Acc: {:.4f}\tVal Loss: {:.4f}".format(
+            args.train_acc, args.train_loss, args.val_acc, args.val_loss
         ))
         # save
         save_model(args)

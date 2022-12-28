@@ -71,7 +71,8 @@ def get_dataset(args):
 
 
 def collate_unlabeled(batch):
-    pass
+    images, labels = zip(*batch)
+    return images, labels
 
 
 def get_loaders(args):
