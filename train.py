@@ -205,10 +205,10 @@ def main(args):
         # save
         save_model(args)
         # log to tensorboard
-        args.writer.add_scalar("Avg train acc", args.train_acc)
-        args.writer.add_scalar("Avg train loss", args.train_loss)
-        args.writer.add_scalar("Avg val acc", args.val_acc)
-        args.writer.add_scalar("Avg val loss", args.val_loss)
+        args.writer.add_scalar("Avg train acc", args.train_acc, ep)
+        args.writer.add_scalar("Avg train loss", args.train_loss, ep)
+        args.writer.add_scalar("Avg val acc", args.val_acc, ep)
+        args.writer.add_scalar("Avg val loss", args.val_loss, ep)
 
 
 if __name__ == "__main__":
