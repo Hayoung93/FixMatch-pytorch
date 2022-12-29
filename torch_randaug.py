@@ -124,15 +124,15 @@ class RandAugment(torch.nn.Module):
         return {
             # op_name: (magnitudes, signed)
             "Identity": (torch.tensor(0.0), False),
-            "ShearX": (torch.linspace(-0.3, 0.3, num_bins), True),
-            "ShearY": (torch.linspace(-0.3, 0.3, num_bins), True),
-            "TranslateX": (torch.linspace(-0.3 * image_size[1], 0.3 * image_size[1], num_bins), True),
-            "TranslateY": (torch.linspace(-0.3 * image_size[0], 0.3 * image_size[0], num_bins), True),
-            "Rotate": (torch.linspace(-30.0, 30.0, num_bins), True),
-            "Brightness": (torch.linspace(0.05, 0.95, num_bins), True),
-            "Color": (torch.linspace(0.05, 0.95, num_bins), True),
-            "Contrast": (torch.linspace(0.05, 0.95, num_bins), True),
-            "Sharpness": (torch.linspace(0.05, 0.95, num_bins), True),
+            "ShearX": (torch.linspace(0.0, 0.3, num_bins), True),
+            "ShearY": (torch.linspace(0.0, 0.3, num_bins), True),
+            "TranslateX": (torch.linspace(0.0 * image_size[1], 0.3 * image_size[1], num_bins), True),
+            "TranslateY": (torch.linspace(0.0 * image_size[0], 0.3 * image_size[0], num_bins), True),
+            "Rotate": (torch.linspace(0.0, 30.0, num_bins), True),
+            "Brightness": (torch.linspace(-0.95, -0.05, num_bins), False),
+            "Color": (torch.linspace(-0.95, -0.05, num_bins), False),
+            "Contrast": (torch.linspace(-0.95, -0.05, num_bins), False),
+            "Sharpness": (torch.linspace(-0.95, -0.05, num_bins), False),
             "Posterize": (8 - (torch.arange(num_bins) / ((num_bins - 1) / 4)).round().int(), False),
             "Solarize": (torch.linspace(255.0, 0.0, num_bins), False),
             "AutoContrast": (torch.tensor(0.0), False),
@@ -159,7 +159,8 @@ class RandAugment(torch.nn.Module):
             op_index = int(torch.randint(len(op_meta), (1,)).item())
             op_name = list(op_meta.keys())[op_index]
             magnitudes, signed = op_meta[op_name]
-            magnitude = float(magnitudes[self.magnitude].item()) if magnitudes.ndim > 0 else 0.0
+            # magnitude = float(magnitudes[self.magnitude].item()) if magnitudes.ndim > 0 else 0.0
+            magnitude = float(magnitudes[torch.randint(31, (1,))].item()) if magnitudes.ndim > 0 else 0.0
             if signed and torch.randint(2, (1,)):
                 magnitude *= -1.0
             img = _apply_op(img, op_name, magnitude, interpolation=self.interpolation, fill=fill)

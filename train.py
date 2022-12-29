@@ -218,6 +218,7 @@ if __name__ == "__main__":
     if cfg.transform.strong.RA and cfg.transform.strong.CTA:
         raise Exception("RA and CTA is not supported together")
     args.cfg = cfg
+    os.makedirs(os.path.join(cfg.param.checkpoint_dir, cfg.param.log_name), exist_ok=True)
     # device
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # main

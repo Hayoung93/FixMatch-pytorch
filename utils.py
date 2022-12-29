@@ -35,10 +35,10 @@ def get_transforms(args):
     # strong transforms
     strong_transforms = []
     strong_transforms.append(ttf.Resize((args.cfg.transform.input_size, args.cfg.transform.input_size)))
-    strong_transforms.append(ttf.ToTensor())
-    strong_transforms.append(ttf.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
     if args.cfg.transform.strong.RA:  # Random augment + Cutout for the stong augmentation
         strong_transforms.append(RandAugment(args.cfg.transform.strong.RA_num, args.cfg.transform.strong.RA_mag))
+        strong_transforms.append(ttf.ToTensor())
+        strong_transforms.append(ttf.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         strong_transforms.append(Cutout())
     elif args.cfg.transform.strong.CTA:  # CTAugment including Cutout for the strong augmentation
         raise Exception("CTA currently not supported")
@@ -161,12 +161,12 @@ class Cutout(torch.nn.Module):
         """
         c, h, w = img.size()
         # patch size and location
-        patch_size = round(w * self.sampler.sample())
-        x = torch.randint(0, w - patch_size)
-        y = torch.randint(0, h - patch_size)
+        patch_size = round(float(w * self.sampler.sample()))
+        x = torch.randint(low=0, high=w - patch_size, size=(1,))
+        y = torch.randint(low=0, high=h - patch_size, size=(1,))
         # gray value
         if img.dtype == torch.float32:
-            if img.min >= 0:  # 0 ~ 1
+            if img.min() >= 0:  # 0 ~ 1
                 value = 0.5
             else:  # -1 ~ 1
                 value = 0.0
