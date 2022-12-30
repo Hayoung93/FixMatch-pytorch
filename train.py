@@ -211,6 +211,7 @@ def main(args):
         args.writer.add_scalar("Avg train loss", args.train_loss, ep)
         args.writer.add_scalar("Avg val acc", args.val_acc, ep)
         args.writer.add_scalar("Avg val loss", args.val_loss, ep)
+        args.writer.add_scalar("lr", args.scheduler.get_last_lr(), ep)
 
 
 if __name__ == "__main__":
