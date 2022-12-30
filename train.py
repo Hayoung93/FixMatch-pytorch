@@ -160,6 +160,8 @@ def main(args):
     args.logger.info(f"Model size: {model.get_param_size()}")
     args.model = model
     args.model.to(args.device)
+    if args.dataparallel:
+        args.model = torch.nn.DataParallel(args.model)
 
     # optimizer & scheduler
     optimizer, scheduler = get_optim(args)
@@ -221,5 +223,9 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(cfg.param.checkpoint_dir, cfg.param.log_name), exist_ok=True)
     # device
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.device_count() >= 2:
+        args.dataparallel = True
+    else:
+        args.dataparallel = False
     # main
     main(args)
