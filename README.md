@@ -10,7 +10,7 @@ randomize magnitude of randaug
 - `python train.py --input_size 96 --log_name 20230131 --randaug --num_epochs 300 --t_max 300`
 
 ### Trained weight
-- RandomAugment
+- RandomAugment  
 | RA magnitude | RA number | epochs | val acc |
 | --- | --- | --- | --- |
 | 1 | 2 | 200 | 91.275 |
