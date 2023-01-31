@@ -212,6 +212,7 @@ def main(args):
         args.writer.add_scalar("Avg val acc", args.val_acc, ep)
         args.writer.add_scalar("Avg val loss", args.val_loss, ep)
         args.writer.add_scalar("lr", args.scheduler.get_last_lr(), ep)
+    args.logger.info("Best val acc: {:.4f} (epoch {})\tBest val loss: {:.4f} (epoch {})".format(args.best_val_acc, args.best_acc_ep, args.best_val_loss, args.best_loss_ep))
 
 
 if __name__ == "__main__":
