@@ -11,8 +11,8 @@ randomize magnitude of randaug
 
 ### Trained weight
 - RandomAugment  
-| RA magnitude | RA number | epochs | val acc |
-| --- | --- | --- | --- |
-| 1 | 2 | 200 | 91.275 |
+| RA magnitude | RA number | epochs | val acc |  
+| --- | --- | --- | --- |  
+| 1 | 2 | 200 | 91.275 |  
 | 1 | 2 | 300 | xx.xxx |
 - CTAugment
