@@ -122,7 +122,6 @@ class RandAugment(torch.nn.Module):
 
     def _augmentation_space(self, num_bins: int, image_size: Tuple[int, int]) -> Dict[str, Tuple[Tensor, bool]]:
         return {
-            # op_name: (magnitudes, signed)
             "Identity": (torch.tensor(0.0), False),
             "ShearX": (torch.linspace(0.0, 0.3, num_bins), True),
             "ShearY": (torch.linspace(0.0, 0.3, num_bins), True),
