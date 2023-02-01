@@ -111,6 +111,7 @@ def eval(args):
     # update best val acc
     if args.val_acc > args.best_val_acc:
         args.best_val_acc = args.val_acc
+        args.cfg.param.checkpoint_name = "model_best_acc.pth"
     # update best val loss
     if args.val_loss < args.best_val_loss:
         args.best_val_loss = args.val_loss
@@ -205,6 +206,8 @@ def main(args):
             args.train_acc, args.train_loss, args.val_acc, args.val_loss
         ))
         # save
+        save_model(args)
+        args.cfg.param.checkpoint_name = "model_last.pth"
         save_model(args)
         # log to tensorboard
         args.writer.add_scalar("Avg train acc", args.train_acc, ep)

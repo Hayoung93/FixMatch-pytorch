@@ -16,12 +16,13 @@ randomize magnitude of randaug
 - `python train.py --input_size 96 --log_name 20230131 --randaug --num_epochs 300 --t_max 300`
 
 ### Trained weight
-- RandomAugment  
+- RandomAugment
+    - Best val acc model was not saved for some early experiments
 
 | RA magnitude | RA number | epochs | Initial LR | val acc |
 | :---: | :---: | :---: | :---: | :---: |
-| 1 | 2 | 200 | 0.005 | 91.275 |
-| 1 | 2 | 300 | 0.005 | xx.xxx |
+| 1 | 2 | 200 | 0.005 | 91.05 (best was 91.275) |
+| 1 | 2 | 300 | 0.005 | 92.95 (best was 93.075) |
 - CTAugment
     - Note: Augmentation's behavior of the original paper and official implement seems different
         - Additional 'blur' operation
