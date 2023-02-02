@@ -1,3 +1,4 @@
+import json
 import torch
 import torchvision
 import os
@@ -232,6 +233,8 @@ if __name__ == "__main__":
         raise Exception("RA and CTA is not supported together")
     args.cfg = cfg
     os.makedirs(os.path.join(cfg.param.checkpoint_dir, cfg.param.log_name), exist_ok=True)
+    with open(os.path.join(cfg.param.checkpoint_dir, cfg.param.log_name, "train_cfg.json"), "w") as f:
+        json.dump(cfg, f, indent=4)
     # device
     args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if torch.cuda.device_count() >= 2:
