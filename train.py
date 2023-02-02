@@ -38,7 +38,6 @@ def train(args):
         else:
             images_u = inputs_gen
             inputs_l, labels_l = inputs.to(args.device), labels.to(args.device)
-        num_samples += inputs_l.shape[0]
         # forward labeled data
         args.optimizer.zero_grad()
         outputs = args.model(inputs_l).softmax(1)
