@@ -196,4 +196,7 @@ class Div255(nn.Module):
         super().__init__()
 
     def forward(self, tensor):
-        return (tensor / 255.).to(torch.float32)
+        if (tensor.max() > 1) or (tensor.dtype == torch.uint8):
+            return (tensor / 255.).to(torch.float32)
+        else:
+            return tensor

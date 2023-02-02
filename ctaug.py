@@ -39,19 +39,11 @@ def apply_op(img: Tensor, op_meta: Dict, interpolation: InterpolationMode, fill:
         img = F.posterize(img, round(magnitude))
     elif op_name == "Rescale":
         rescale_method = params[1]
+        c, h, w = img.shape
         crop_width = round(magnitude * img.shape[1])
-        rescale_ratio = img.shape[1] / crop_width
         img = F.center_crop(img, crop_width)
-        img = F.affine(
-            img,
-            angle=0.0,
-            translate=[0, 0],
-            scale=rescale_ratio,
-            shear=[0.0, 0.0],
-            interpolation=rescale_method,
-            fill=fill,
-            center=[0, 0],
-        )
+        img = F.resize(F.to_pil_image(img), (h, w), rescale_method)
+        img = F.to_tensor(img)
     elif op_name == "Rotate":
         img = F.rotate(img, magnitude, interpolation=interpolation, fill=fill)
     elif op_name == "Sharpness":
