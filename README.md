@@ -1,8 +1,10 @@
 - TODO  
-ctaugment  
-randomize magnitude of randaug
+randomize magnitude of randaug (someday in future...)
 
 ## Unofficial Pytorch implementation of FixMatch (NIPS 2020)
+- STL-10 dataset
+    - Note that the original paper uses 1000 labels for training, here I used all possible labels
+- WRN-28-2 (copied model code from [xternalz/WideResNet-pytorch](https://github.com/xternalz/WideResNet-pytorch))
 
 ### Links to official implementation
 - [Official GitHub](https://github.com/google-research/fixmatch/tree/d4985a158065947dba803e626ee9a6721709c570) (Tensorflow)
@@ -29,3 +31,7 @@ randomize magnitude of randaug
         - Blending after smoothing
         - ...
     - In this version, I followed the paper.
+
+| epochs | Initial LR | val acc |
+| :---: | :---: | :---: |
+| 300 | 0.005 | 0.00 |
