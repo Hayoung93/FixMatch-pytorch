@@ -144,18 +144,19 @@ class CTAugment(nn.Module):
         self.rescale_index = []
     
     def update(self, preds, labels):
-        # compute update weight and apply to bins
-        w = 1 -  1 / (2 * len(labels)) * (preds - labels).abs().sum()
-        for ai, bi in zip(self.aug_index, self.bin_index):
-            self.bins[ai][bi] = self.decay * self.bins[ai][bi] + (1 - self.decay) * w
-        # clear index
-        self.aug_index = []
-        self.bin_index = []
-        # update if rescaling was chosen
-        if len(self.rescale_index) > 0:
-            for ri in self.rescale_index:
-                self.rescale_bins[ri] = self.decay * self.rescale_bins[ri] + (1 - self.decay) * w
-            self.rescale_index = []
+        with torch.no_grad():
+            # compute update weight and apply to bins
+            w = (1 -  1 / (2 * len(labels)) * (preds - labels).abs().sum()).cpu()
+            for ai, bi in zip(self.aug_index, self.bin_index):
+                self.bins[ai][bi] = self.decay * self.bins[ai][bi] + (1 - self.decay) * w
+            # clear index
+            self.aug_index = []
+            self.bin_index = []
+            # update if rescaling was chosen
+            if len(self.rescale_index) > 0:
+                for ri in self.rescale_index:
+                    self.rescale_bins[ri] = self.decay * self.rescale_bins[ri] + (1 - self.decay) * w
+                self.rescale_index = []
     
     def forward(self, img):
         augs = self.sample()
@@ -187,7 +188,7 @@ class CTAugment(nn.Module):
             if key == "Rescale":
                 rescale_index = torch.randint(low=0, high=len(self.rescale_options), size=(1,))
                 self.rescale_index.append(rescale_index)
-                aug[key].append(self.rescale_bins[rescale_index])
+                aug[key].append(self.rescale_options[rescale_index])
             augs.append(aug)
         return augs
 
