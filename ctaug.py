@@ -14,11 +14,11 @@ def apply_op(img: Tensor, op_meta: Dict, interpolation: InterpolationMode, fill:
     """
     Different behavior with RA - e.g., blending after some operations
     """
-    op_name, params = op_meta.items()
-    magnitude = params[0]
+    op_name, params = [*op_meta.items()][0]
+    magnitude = params[0].item()
     if op_name == "AutoContrast":
-        img = F.autocontrast(img)
-        pass  # blend needed
+        img_t = F.autocontrast(img.clone())
+        img = img_t * magnitude + img * (1 - magnitude)  # blend
     elif op_name == "Brightness":
         img = F.adjust_brightness(img, magnitude)
     elif op_name == "Color":
@@ -28,18 +28,30 @@ def apply_op(img: Tensor, op_meta: Dict, interpolation: InterpolationMode, fill:
     elif op_name == "Cutout":
         img = cutout_ctaug(img, magnitude)
     elif op_name == "Equalize":
-        img = F.equalize(img)
-        pass  # blend needed
+        img_t = F.equalize(img.clone())
+        img = img_t * magnitude + img * (1 - magnitude)  # blend
     elif op_name == "Invert":
-        img = F.invert(img)
-        pass  # blend needed
+        img_t = F.invert(img.clone())
+        img = img_t * magnitude + img * (1 - magnitude)  # blend
     elif op_name == "Identity":
         pass
     elif op_name == "Posterize":
         img = F.posterize(img, round(magnitude))
     elif op_name == "Rescale":
         rescale_method = params[1]
-        pass
+        crop_width = round(magnitude * img.shape[1])
+        rescale_ratio = img.shape[1] / crop_width
+        img = F.center_crop(img, crop_width)
+        img = F.affine(
+            img,
+            angle=0.0,
+            translate=[0, 0],
+            scale=rescale_ratio,
+            shear=[0.0, 0.0],
+            interpolation=rescale_method,
+            fill=fill,
+            center=[0, 0],
+        )
     elif op_name == "Rotate":
         img = F.rotate(img, magnitude, interpolation=interpolation, fill=fill)
     elif op_name == "Sharpness":
@@ -75,11 +87,11 @@ def apply_op(img: Tensor, op_meta: Dict, interpolation: InterpolationMode, fill:
             center=[0, 0],
         )
     elif op_name == "Smooth":
-        smooth_kernel = torch.ones((3, 1, 3, 3))
+        smooth_kernel = torch.ones((3, 1, 3, 3), dtype=torch.uint8)
         smooth_kernel[:, :, 1, 1] = 5
         with torch.no_grad():  # img size [3, h, w]
-            img = nn.functional.conv2d(img.unsqueeze(0), smooth_kernel, padding=1, groups=3).squeeze(0)
-        pass  # blend needed
+            img_t = nn.functional.conv2d(img.clone().unsqueeze(0), smooth_kernel, padding=1, groups=3).squeeze(0)
+        img = img_t * magnitude + img * (1 - magnitude)  # blend
     elif op_name == "Solarize":
         img = F.solarize(img, magnitude)
     elif op_name == "TranslateX":
@@ -131,23 +143,24 @@ class CTAugment(nn.Module):
         self.bin_index = []
         self.rescale_index = []
     
-    def update(self, preds, labels, aug_index, bin_index):
+    def update(self, preds, labels):
         # compute update weight and apply to bins
         w = 1 -  1 / (2 * len(labels)) * (preds - labels).abs().sum()
-        for ai, bi in zip(aug_index, bin_index):
-            if ai.shape[0] > 1:
-                for aii, bii in zip(ai, bi):
-                    self.bins[aii][bii] = self.decay * self.bins[aii][bii] + (1 - self.decay) * w
-            else:
-                self.bins[ai][bi] = self.decay * self.bins[ai][bi] + (1 - self.decay) * w
+        for ai, bi in zip(self.aug_index, self.bin_index):
+            self.bins[ai][bi] = self.decay * self.bins[ai][bi] + (1 - self.decay) * w
         # clear index
         self.aug_index = []
         self.bin_index = []
+        # update if rescaling was chosen
+        if len(self.rescale_index) > 0:
+            for ri in self.rescale_index:
+                self.rescale_bins[ri] = self.decay * self.rescale_bins[ri] + (1 - self.decay) * w
+            self.rescale_index = []
     
     def forward(self, img):
         augs = self.sample()
         for op_meta in augs:
-            image = apply_op(img, op_meta, InterpolationMode.NEAREST)
+            image = apply_op(img, op_meta, InterpolationMode.NEAREST, fill=None)
         return image
 
     def sample(self):
@@ -189,7 +202,7 @@ def augmentation_space(num_bins: int) -> Dict[str, Tensor]:
         "Cutout": torch.linspace(0, 0.5, num_bins),
         "Equalize": torch.linspace(0., 1., num_bins),
         "Invert": torch.linspace(0., 1., num_bins),
-        "Identity": torch.tensor(0.0),
+        "Identity": torch.linspace(0., 1., num_bins),
         "Posterize": torch.linspace(0., 8., num_bins),
         "Rescale": torch.linspace(0.5, 1., num_bins),
         "Rotate": torch.linspace(-45.0, 45.0, num_bins),
