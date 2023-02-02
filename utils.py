@@ -9,6 +9,7 @@ from torchvision import datasets, models
 from termcolor import colored
 
 from torch_randaug import RandAugment
+from ctaug import CTAugment
 from wideresnet import WideResNet
 
 
@@ -41,7 +42,12 @@ def get_transforms(args):
         strong_transforms.append(ttf.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
         strong_transforms.append(Cutout())
     elif args.cfg.transform.strong.CTA:  # CTAugment including Cutout for the strong augmentation
-        raise Exception("CTA currently not supported")
+        # Note: Official Tensorflow implementation seems not to normalize
+        strong_transforms.append(ttf.PILToTensor())
+        strong_transforms.append(CTAugment(img_size=(args.cfg.transform.input_size, args.cfg.transform.input_size)))
+        strong_transforms.append(Div255())
+        strong_transforms.append(ttf.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)))
+        strong_transforms.append(Cutout())
     # weak transforms
     weak_transforms = []
     weak_transforms.append(ttf.Resize((args.cfg.transform.input_size, args.cfg.transform.input_size)))
@@ -139,9 +145,14 @@ def save_model(args):
 def load_model(args):
     cp = torch.load(os.path.join(args.cfg.param.checkpoint_dir, args.cfg.param.log_name, args.cfg.param.checkpoint_name))
     args.model.load_state_dict(cp["state_dict"])
-    args.optimizer.load_state_dict(cp["optimizer"])
-    args.scheduler.load_state_dict(cp["scheduler"])
-    params = [cp["epoch"] + 1, cp["best_val_acc"], cp["best_val_loss"]]
+    if "optimizer" in cp:
+        args.optimizer.load_state_dict(cp["optimizer"])
+    if "scheduler" in cp:
+        args.scheduler.load_state_dict(cp["scheduler"])
+    if ("epoch" in cp) and ("best_val_acc" in cp) and ("best_val_loss" in cp):
+        params = [cp["epoch"] + 1, cp["best_val_acc"], cp["best_val_loss"]]
+    else:
+        params = None
     return args, params
 
 
@@ -178,3 +189,11 @@ class Cutout(torch.nn.Module):
         img[:, y:y+patch_size, x:x+patch_size] = value
 
         return img
+
+
+class Div255(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, tensor):
+        return (tensor / 255.).to(torch.float32)
