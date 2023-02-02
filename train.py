@@ -1,4 +1,5 @@
 import torch
+import torchvision
 import os
 from argparse import Namespace
 from tqdm import tqdm
@@ -61,8 +62,12 @@ def train(args):
             valid_index = pseudo_mask.nonzero()[:, 0].tolist()
             for vi in valid_index:
                 inputs_u.append(args.strong_transforms(images_u[vi]))
+                # img_grid = torchvision.utils.make_grid(inputs_u[-1])
+                # args.writer.add_image('cta-transformed image', img_grid, i)
             inputs_u = torch.stack(inputs_u, dim=0).to(args.device)
             outputs = args.model(inputs_u).softmax(1)
+            if args.cfg.transform.strong.CTA is True:
+                args.strong_transforms.transforms[2].update(outputs, torch.nn.functional.one_hot(pseudo_labels, 10).float())
             loss_u = args.criterion(outputs, torch.nn.functional.one_hot(pseudo_labels, 10).float())
             loss_total = loss_l + loss_u * args.cfg.train.unsup_weight
         else:
@@ -161,8 +166,6 @@ def main(args):
     args.logger.info(f"Model size: {model.get_param_size()}")
     args.model = model
     args.model.to(args.device)
-    if args.dataparallel:
-        args.model = torch.nn.DataParallel(args.model)
 
     # optimizer & scheduler
     optimizer, scheduler = get_optim(args)
@@ -184,14 +187,17 @@ def main(args):
     # resume
     if args.cfg.train.resume:
         args, params = load_model(args)
-        start_epoch, args.best_val_acc, args.best_val_loss = params
-    
+        if params is not None:
+            start_epoch, args.best_val_acc, args.best_val_loss = params
+
     # check eval
     if not args.cfg.train.skip_first_eval:
         args.current_epoch = -1
         args = eval(args)
-    
+
     # main training loop
+    if args.dataparallel:
+        args.model = torch.nn.DataParallel(args.model)
     for ep in range(start_epoch, args.cfg.train.num_epochs):
         args.current_epoch = ep
         args.logger.info("Epoch: {}\tLR: {}".format(ep, args.optimizer.state_dict()['param_groups'][0]['lr']))
@@ -214,7 +220,7 @@ def main(args):
         args.writer.add_scalar("Avg train loss", args.train_loss, ep)
         args.writer.add_scalar("Avg val acc", args.val_acc, ep)
         args.writer.add_scalar("Avg val loss", args.val_loss, ep)
-        args.writer.add_scalar("lr", args.scheduler.get_last_lr(), ep)
+        args.writer.add_scalar("lr", args.scheduler.get_last_lr()[0], ep)
     args.logger.info("Best val acc: {:.4f} (epoch {})\tBest val loss: {:.4f} (epoch {})".format(args.best_val_acc, args.best_acc_ep, args.best_val_loss, args.best_loss_ep))
 
 
