@@ -116,10 +116,12 @@ def eval(args):
     # update best val acc
     if args.val_acc > args.best_val_acc:
         args.best_val_acc = args.val_acc
+        args.best_acc_ep = args.current_epoch
         args.cfg.param.checkpoint_name = "model_best_acc.pth"
     # update best val loss
     if args.val_loss < args.best_val_loss:
         args.best_val_loss = args.val_loss
+        args.best_loss_ep = args.current_epoch
         args.cfg.param.checkpoint_name = "model_best.pth"
     return args
 
