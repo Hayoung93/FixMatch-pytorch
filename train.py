@@ -206,7 +206,8 @@ def main(args):
         # train
         args = train(args)
         # eval
-        args = eval(args)
+        with torch.no_grad():
+            args = eval(args)
         # scheduler
         args.scheduler.step()
         # print

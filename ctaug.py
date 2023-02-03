@@ -151,10 +151,11 @@ class CTAugment(nn.Module):
                 self.rescale_index = []
     
     def forward(self, img):
-        augs = self.sample()
-        for op_meta in augs:
-            image = apply_op(img, op_meta, InterpolationMode.NEAREST, fill=None)
-        return image
+        with torch.no_grad():
+            augs = self.sample()
+            for op_meta in augs:
+                image = apply_op(img, op_meta, InterpolationMode.NEAREST, fill=None)
+            return image
 
     def sample(self):
         # sample augmentations from categorical distribution according to bins
