@@ -112,7 +112,7 @@ def eval(args):
             running_acc / inputs.shape[0], running_loss, args.val_acc / num_samples, args.val_loss / num_samples))
     # average val acc & loss
     args.val_acc = args.val_acc / num_samples
-    args.val_loss = running_loss / num_samples
+    args.val_loss = args.val_loss / num_samples
     # update best val acc
     if args.val_acc > args.best_val_acc:
         args.best_val_acc = args.val_acc
