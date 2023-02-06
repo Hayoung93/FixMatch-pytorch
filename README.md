@@ -1,5 +1,6 @@
 - TODO  
-randomize magnitude of randaug (someday in future...)
+    - Randomize magnitude of randaug (someday in future...)
+    - DDP & interleave for batch norm in multiple gpus? (someday in future...)
 
 ## Unofficial Pytorch implementation of FixMatch (NIPS 2020)
 - STL-10 dataset
@@ -20,6 +21,7 @@ randomize magnitude of randaug (someday in future...)
 ### Trained weight
 - RandomAugment
     - Best val acc model was not saved for some early experiments
+    - Refer to [papaerswithcode](https://paperswithcode.com/sota/image-classification-on-stl-10), 92.02 is the official score.
 
 | RA magnitude | RA number | epochs | Initial LR | val acc |
 | :---: | :---: | :---: | :---: | :---: |
@@ -31,7 +33,8 @@ randomize magnitude of randaug (someday in future...)
         - Blending after smoothing
         - ...
     - In this version, I followed the paper.
+    - Refer to [papaerswithcode](https://paperswithcode.com/sota/image-classification-on-stl-10), 94.83 is the official score.
 
 | epochs | Initial LR | val acc |
 | :---: | :---: | :---: |
-| 300 | 0.005 | 0.00 |
+| 300 | 0.05 | 91.50 |
