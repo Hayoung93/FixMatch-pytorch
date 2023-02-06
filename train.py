@@ -244,4 +244,5 @@ if __name__ == "__main__":
     else:
         args.dataparallel = False
     # main
+    torch.backends.cudnn.benchmark = True
     main(args)
